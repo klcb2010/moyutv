@@ -4,9 +4,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.iptv.tvplayer.R
 import com.iptv.tvplayer.data.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class ChannelAdapter(
     private var channels: List<Channel>,
@@ -19,6 +24,7 @@ class ChannelAdapter(
         val tvNumber: TextView = itemView.findViewById(R.id.tv_channel_number)
         val tvName: TextView = itemView.findViewById(R.id.tv_channel_name)
         val tvEpg: TextView = itemView.findViewById(R.id.tv_channel_epg)
+        val ivLogo: ImageView = itemView.findViewById(R.id.iv_channel_logo)
 
         init {
             itemView.setOnClickListener {
@@ -48,6 +54,15 @@ class ChannelAdapter(
         holder.tvName.text = channel.name
         holder.itemView.isSelected = position == selectedPosition
         
+        val logoUrl = com.iptv.tvplayer.data.EpgManager.getChannelLogo(channel.name)
+        if (logoUrl != null && logoUrl.isNotEmpty()) {
+            ImageLoader.load(logoUrl, holder.ivLogo)
+        } else {
+            holder.ivLogo.tag = null
+            holder.ivLogo.setImageBitmap(null)
+            holder.ivLogo.visibility = View.GONE
+        }
+
         val epgInfo = com.iptv.tvplayer.data.EpgManager.getCurrentAndNextProgram(channel.name)
         if (epgInfo.first != null) {
             holder.tvEpg.text = "${epgInfo.first!!.startTimeStr} ${epgInfo.first!!.title}"
@@ -72,5 +87,46 @@ class ChannelAdapter(
         selectedPosition = position
         notifyItemChanged(oldPos)
         notifyItemChanged(selectedPosition)
+    }
+}
+
+object ImageLoader {
+    private val cache = HashMap<String, android.graphics.Bitmap>()
+
+    fun load(url: String, imageView: android.widget.ImageView) {
+        val cached = cache[url]
+        if (cached != null) {
+            imageView.setImageBitmap(cached)
+            imageView.visibility = View.VISIBLE
+            return
+        }
+
+        imageView.tag = url
+        imageView.setImageBitmap(null)
+        imageView.visibility = View.GONE
+
+        MainScope().launch {
+            val bitmap = withContext(Dispatchers.IO) {
+                try {
+                    val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                    conn.connectTimeout = 3000
+                    conn.readTimeout = 5000
+                    conn.doInput = true
+                    conn.connect()
+                    if (conn.responseCode == 200) {
+                        android.graphics.BitmapFactory.decodeStream(conn.inputStream)
+                    } else null
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            if (bitmap != null) {
+                cache[url] = bitmap
+                if (imageView.tag == url) {
+                    imageView.setImageBitmap(bitmap)
+                    imageView.visibility = View.VISIBLE
+                }
+            }
+        }
     }
 }

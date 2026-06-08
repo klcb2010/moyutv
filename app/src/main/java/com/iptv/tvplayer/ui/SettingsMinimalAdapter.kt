@@ -18,7 +18,8 @@ data class SettingItem(
 
 class SettingsMinimalAdapter(
     private var items: List<SettingItem>,
-    private val onItemSelected: (Int, SettingItem) -> Unit
+    private val onItemSelected: (Int, SettingItem) -> Unit,
+    private val onItemLongSelected: ((Int, SettingItem) -> Unit)? = null
 ) : RecyclerView.Adapter<SettingsMinimalAdapter.SettingsViewHolder>() {
 
     private var selectedPosition = 0
@@ -38,6 +39,15 @@ class SettingsMinimalAdapter(
                     notifyItemChanged(oldPos)
                     notifyItemChanged(selectedPosition)
                     onItemSelected(pos, items[pos])
+                }
+            }
+            itemView.setOnLongClickListener {
+                val pos = adapterPosition
+                if (pos != RecyclerView.NO_POSITION && onItemLongSelected != null) {
+                    onItemLongSelected(pos, items[pos])
+                    true
+                } else {
+                    false
                 }
             }
         }

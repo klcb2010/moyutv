@@ -19,6 +19,7 @@ class CategoryAdapter(
 
         init {
             itemView.setOnClickListener {
+                setSelected(adapterPosition)
                 onCategorySelected(adapterPosition)
             }
             itemView.setOnFocusChangeListener { view, hasFocus ->

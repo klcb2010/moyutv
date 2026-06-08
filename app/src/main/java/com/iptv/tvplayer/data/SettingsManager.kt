@@ -43,6 +43,13 @@ object SettingsManager {
         if (currentJson == "[{\"name\":\"默认直播(IPv6)\",\"url\":\"https://live.fanmingming.com/tv/m3u/ipv6.m3u\"},{\"name\":\"默认直播(备用)\",\"url\":\"https://t.freetv.fun/m3u/playlist_all_original.m3u\"}]") {
             prefs.edit().remove(KEY_SUBSCRIPTION_LIST).apply()
         }
+
+        // Migrate old default EPG URL
+        val currentEpgJson = prefs.getString(KEY_EPG_LIST, "") ?: ""
+        if (currentEpgJson.contains("https://epg.112114.xyz/pp.xml.gz") || currentEpgJson.contains("112114.xyz")) {
+            prefs.edit().remove(KEY_EPG_LIST).apply()
+            prefs.edit().remove(KEY_ACTIVE_EPG).apply()
+        }
         
         // Initialize reactive states
         decoderTypeState.value = decoderType
@@ -120,7 +127,7 @@ object SettingsManager {
 
     var epgs: List<Subscription>
         get() {
-            val defaultJsonStr = "[{\"name\":\"默认EPG\",\"url\":\"https://epg.112114.xyz/pp.xml.gz\"}]"
+            val defaultJsonStr = "[{\"name\":\"默认EPG\",\"url\":\"https://gitee.com/taksssss/tv/raw/main/epg/erw.xml.gz\"}]"
             var jsonStr = prefs.getString(KEY_EPG_LIST, defaultJsonStr) ?: defaultJsonStr
             if (jsonStr == "[]") jsonStr = defaultJsonStr
             val list = mutableListOf<Subscription>()
@@ -194,6 +201,18 @@ object SettingsManager {
     var lastPlayedUrl: String
         get() = prefs.getString(KEY_LAST_PLAYED_URL, "") ?: ""
         set(value) = prefs.edit().putString(KEY_LAST_PLAYED_URL, value).apply()
+
+    var lastCategoryName: String
+        get() = prefs.getString("last_category_name", "") ?: ""
+        set(value) = prefs.edit().putString("last_category_name", value).apply()
+
+    var lastChannelName: String
+        get() = prefs.getString("last_channel_name", "") ?: ""
+        set(value) = prefs.edit().putString("last_channel_name", value).apply()
+
+    var lastUrlIndex: Int
+        get() = prefs.getInt("last_url_index", 0)
+        set(value) = prefs.edit().putInt("last_url_index", value).apply()
 
     var favorites: Set<String>
         get() = prefs.getStringSet(KEY_FAVORITES, emptySet()) ?: emptySet()
